@@ -8,11 +8,19 @@ import cl.duoc.digitalfix.workorders.repository.WorkOrderRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class WorkOrderService {
+
+    private static final ZoneId ZONA_CHILE =
+            ZoneId.of("America/Santiago");
+
+    private LocalDateTime ahoraChile() {
+        return LocalDateTime.now(ZONA_CHILE);
+    }
 
     private final WorkOrderRepository repository;
 
@@ -22,7 +30,7 @@ public class WorkOrderService {
 
     public WorkOrder crear(WorkOrder workOrder) {
 
-        LocalDateTime ahora = LocalDateTime.now();
+        LocalDateTime ahora = ahoraChile();
 
         workOrder.setId(null);
         workOrder.setEstado(EstadoOrden.CREADA);
@@ -125,7 +133,7 @@ public class WorkOrderService {
         }
 
         workOrder.setEstado(nuevoEstado);
-        workOrder.setFechaActualizacion(LocalDateTime.now());
+        workOrder.setFechaActualizacion(ahoraChile());
 
         return repository.save(workOrder);
     }
