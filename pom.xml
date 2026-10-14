@@ -41,6 +41,12 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
+        <!-- RabbitMQ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- Driver JDBC de Oracle -->
         <dependency>
             <groupId>com.oracle.database.jdbc</groupId>

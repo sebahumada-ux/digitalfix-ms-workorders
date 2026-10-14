@@ -2,6 +2,7 @@ package cl.duoc.digitalfix.workorders.service;
 
 import cl.duoc.digitalfix.workorders.exception.RecursoNoEncontradoException;
 import cl.duoc.digitalfix.workorders.exception.TransicionEstadoInvalidaException;
+import cl.duoc.digitalfix.workorders.messaging.WorkOrderEventPublisher;
 import cl.duoc.digitalfix.workorders.model.EstadoOrden;
 import cl.duoc.digitalfix.workorders.model.WorkOrder;
 import cl.duoc.digitalfix.workorders.repository.WorkOrderRepository;
@@ -18,14 +19,19 @@ public class WorkOrderService {
     private static final ZoneId ZONA_CHILE =
             ZoneId.of("America/Santiago");
 
-    private LocalDateTime ahoraChile() {
-        return LocalDateTime.now(ZONA_CHILE);
+    private final WorkOrderRepository repository;
+    private final WorkOrderEventPublisher eventPublisher;
+
+    public WorkOrderService(
+            WorkOrderRepository repository,
+            WorkOrderEventPublisher eventPublisher) {
+
+        this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
-    private final WorkOrderRepository repository;
-
-    public WorkOrderService(WorkOrderRepository repository) {
-        this.repository = repository;
+    private LocalDateTime ahoraChile() {
+        return LocalDateTime.now(ZONA_CHILE);
     }
 
     public WorkOrder crear(WorkOrder workOrder) {
@@ -135,6 +141,45 @@ public class WorkOrderService {
         workOrder.setEstado(nuevoEstado);
         workOrder.setFechaActualizacion(ahoraChile());
 
-        return repository.save(workOrder);
+        WorkOrder guardada = repository.save(workOrder);
+
+        switch (nuevoEstado) {
+
+            case ASIGNADA -> {
+                eventPublisher.enviarEmail(
+                        guardada.getId(),
+                        nuevoEstado.name()
+                );
+
+                eventPublisher.enviarDespacho(
+                        guardada.getId(),
+                        nuevoEstado.name()
+                );
+            }
+
+            case EN_DESPLAZAMIENTO -> {
+                eventPublisher.enviarEmail(
+                        guardada.getId(),
+                        nuevoEstado.name()
+                );
+            }
+
+            case CERRADA -> {
+                eventPublisher.enviarEmail(
+                        guardada.getId(),
+                        nuevoEstado.name()
+                );
+
+                eventPublisher.generarReporte(
+                        guardada.getId(),
+                        nuevoEstado.name()
+                );
+            }
+
+            default -> {
+            }
+        }
+
+        return guardada;
     }
 }
