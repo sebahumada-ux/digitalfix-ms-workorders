@@ -72,7 +72,11 @@ public class WorkOrderController {
             @Valid @RequestBody ActualizarEstadoRequest request) {
 
         WorkOrder ordenActualizada =
-                service.actualizarEstado(id, request.getEstado());
+                service.actualizarEstado(
+                        id,
+                        request.getEstado(),
+                        request.getObservacionTecnica()
+                );
 
         return ResponseEntity.ok(ordenActualizada);
     }
