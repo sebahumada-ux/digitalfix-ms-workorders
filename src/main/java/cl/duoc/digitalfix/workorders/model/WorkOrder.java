@@ -47,4 +47,8 @@ public class WorkOrder {
 
     @Column(name = "FECHA_ACTUALIZACION", nullable = false)
     private LocalDateTime fechaActualizacion;
+
+    @Size(max = 1000, message = "La observación no puede superar 1000 caracteres")
+    @Column(name = "OBSERVACION_TECNICA", length = 1000)
+    private String observacionTecnica;
 }
