@@ -42,6 +42,7 @@ public class WorkOrderService {
         workOrder.setEstado(EstadoOrden.CREADA);
         workOrder.setFechaCreacion(ahora);
         workOrder.setFechaActualizacion(ahora);
+        workOrder.setObservacionTecnica(null);
 
         return repository.save(workOrder);
     }
@@ -93,7 +94,8 @@ public class WorkOrderService {
 
     public WorkOrder actualizarEstado(
             Long id,
-            EstadoOrden nuevoEstado) {
+            EstadoOrden nuevoEstado,
+            String observacionTecnica) {
 
         WorkOrder workOrder = repository.findById(id)
                 .orElseThrow(() ->
@@ -138,8 +140,28 @@ public class WorkOrderService {
             );
         }
 
+        String observacion = observacionTecnica == null
+                ? ""
+                : observacionTecnica.trim();
+
+        if (observacion.length() > 1000) {
+            throw new IllegalArgumentException(
+                    "La observación no puede superar 1000 caracteres"
+            );
+        }
+
+        if (nuevoEstado == EstadoOrden.CERRADA && observacion.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Debes ingresar una observación para cerrar la orden"
+            );
+        }
+
         workOrder.setEstado(nuevoEstado);
         workOrder.setFechaActualizacion(ahoraChile());
+
+        if (!observacion.isBlank()) {
+            workOrder.setObservacionTecnica(observacion);
+        }
 
         WorkOrder guardada = repository.save(workOrder);
 
