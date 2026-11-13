@@ -1,11 +1,15 @@
+
 package cl.duoc.digitalfix.workorders.service;
 
 import cl.duoc.digitalfix.workorders.exception.RecursoNoEncontradoException;
 import cl.duoc.digitalfix.workorders.exception.TransicionEstadoInvalidaException;
 import cl.duoc.digitalfix.workorders.messaging.WorkOrderEventPublisher;
+import cl.duoc.digitalfix.workorders.messaging.KafkaWorkOrderEventPublisher;
 import cl.duoc.digitalfix.workorders.model.EstadoOrden;
 import cl.duoc.digitalfix.workorders.model.WorkOrder;
 import cl.duoc.digitalfix.workorders.repository.WorkOrderRepository;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,12 +26,31 @@ public class WorkOrderService {
     private final WorkOrderRepository repository;
     private final WorkOrderEventPublisher eventPublisher;
 
+    // NUEVO: Productor Kafka opcional
+    private KafkaWorkOrderEventPublisher kafkaPublisher;
+
     public WorkOrderService(
             WorkOrderRepository repository,
             WorkOrderEventPublisher eventPublisher) {
 
         this.repository = repository;
         this.eventPublisher = eventPublisher;
+    }
+
+    // NUEVO: Inyectar Kafka solo cuando esté habilitado
+    @Autowired(required = false)
+    public void configurarKafkaPublisher(
+            KafkaWorkOrderEventPublisher kafkaPublisher) {
+
+        this.kafkaPublisher = kafkaPublisher;
+    }
+
+    // NUEVO: Publicar evento si Kafka está habilitado
+    private void publicarEnKafka(WorkOrder orden) {
+
+        if (kafkaPublisher != null) {
+            kafkaPublisher.publicar(orden);
+        }
     }
 
     private LocalDateTime ahoraChile() {
@@ -44,7 +67,12 @@ public class WorkOrderService {
         workOrder.setFechaActualizacion(ahora);
         workOrder.setObservacionTecnica(null);
 
-        return repository.save(workOrder);
+        WorkOrder guardada = repository.save(workOrder);
+
+        // NUEVO: Evento de creación hacia Kafka
+        publicarEnKafka(guardada);
+
+        return guardada;
     }
 
     public List<WorkOrder> listarConFiltros(
@@ -165,6 +193,7 @@ public class WorkOrderService {
 
         WorkOrder guardada = repository.save(workOrder);
 
+        // RABBITMQ: Toda la lógica original se mantiene
         switch (nuevoEstado) {
 
             case ASIGNADA -> {
@@ -201,6 +230,9 @@ public class WorkOrderService {
             default -> {
             }
         }
+
+        // NUEVO: Publicar el cambio de estado en Kafka
+        publicarEnKafka(guardada);
 
         return guardada;
     }
